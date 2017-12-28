@@ -1,6 +1,9 @@
 #include <iostream>
 #include <cstdlib> // Para random
 #include <string> // Para pedir datos al usuario
+// TODO: Borrar ctime
+#include <ctime> // Para hacer pruebas.
+
 
 using namespace std;
 
@@ -70,12 +73,43 @@ void pedirCodigo(tCodigo codigo){
 	}
 }
 
+void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
+	if (admiteRepetidos){
+		for (unsigned int i = 0; i < TAM_CODIGO; i++){
+			codigo[i] = static_cast<tColor>( rand() % INCORRECTO );
+		}
+	}else{
+		// A pesar de lo complejo que parece, lo he probado con ctime y
+		// tarda menos que crear un codigo aleatorio y, si esta repetido y no admite repetidos,
+		// generar uno nuevo; pues tienes que recorrer todo el codigo cada vez
+		tColor tmpArr[INCORRECTO];
+		// Primero creamos un array con TODOS los elementos del enum (ordenados)
+		for(unsigned int i = 0; i < INCORRECTO; i++){
+			tmpArr[i] = static_cast<tColor>(i);
+		}
+
+		// Lo removemos (vamos intercambiando valores mediante una variable temporal)
+		// Como solo vamos a usar los TAM_CODIGO primeros, removemos solo esos
+		for (unsigned int i = 0; i < TAM_CODIGO; i++){
+			tColor swap = tmpArr[i];
+			int j = rand() % INCORRECTO;
+
+			tmpArr[i] = tmpArr[j];
+			tmpArr[j] = swap;
+		}
+		// Y ahora lo metemos al codigo
+		for (unsigned int i = 0; i < TAM_CODIGO; i++){
+			codigo[i] = tmpArr[i];
+		}
+	}
+}
+
 int main(){
 	srand(time(NULL));
 
+	// Testing
 	tCodigo codigo;
-
-	pedirCodigo(codigo);
+	codigoAleatorio(codigo, false);
 
 	return 0;
 }
