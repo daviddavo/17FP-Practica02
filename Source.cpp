@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib> // Para random
 #include <string> // Para pedir datos al usuario
+#include <vector> // Para la versión dos de la práctica
 // TODO: Borrar ctime
 #include <ctime> // Para hacer pruebas.
 
@@ -10,6 +11,20 @@ using namespace std;
 const unsigned short int TAM_CODIGO = 4;
 typedef enum { ROJO, AZUL, VERDE, AMARILLO, MARRON, BLANCO, INCORRECTO } tColor;
 typedef tColor tCodigo[TAM_CODIGO];
+
+// Version 2
+/* Siendo p el tamaño del codigo y n el numero de colores
+ * Combinaciones sin repetición n! / (p! (n-p)!)
+ * Combinaciones con repetición (n+p-1)! / (p!(n-1)!)
+ * Para p = 4, n = 6: sr = 15, cr = 7560
+ */
+
+// Sinceramente, yo haría un
+// typedef struct {tCodigo codigo; bool posible} tcodigoPosible;
+// Y un vector<tcodigoPosible>
+// const unsigned int CODIGOS_POSIBLES = 7560;
+typedef vector<tCodigo> tCodigos;
+// typedef vector<bool> tCodigosPosibles; // No creo que esto sea necesario
 
 char color2char(tColor color){
 	char c;
@@ -43,6 +58,15 @@ tColor char2color(char c){
 	return color;
 }
 
+string code2str(tCodigo codigo){
+	string cstr;
+	for(unsigned int i = 0; i < TAM_CODIGO; i++){
+		cstr += color2char(codigo[i]);
+	}
+
+	return cstr;
+}
+
 void pedirCodigo(tCodigo codigo){
 	// Primero mostramos la frase
 	cout << "Introduce el codigo (palabra de " << TAM_CODIGO << " letras con alguna de ";
@@ -73,6 +97,20 @@ void pedirCodigo(tCodigo codigo){
 	}
 }
 
+void compararCodigos(const tCodigo codigo, const tCodigo hipotesis, int& colocados, int& descolocados){
+	for (unsigned int i = 0; i < TAM_CODIGO; i++){
+		for (unsigned int j = 0; j < TAM_CODIGO; j++){
+			if(codigo[i] == hipotesis[j]){
+				if (i == j){
+					colocados++;
+				} else{
+					descolocados++;
+				}
+			}
+		}
+	}
+}
+
 void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
 	if (admiteRepetidos){
 		for (unsigned int i = 0; i < TAM_CODIGO; i++){
@@ -80,7 +118,9 @@ void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
 		}
 	}else{
 		// A pesar de lo complejo que parece, lo he probado con ctime y
-		// tarda menos que crear un codigo aleatorio y, si esta repetido y no admite repetidos,
+		// tarda menos que crear un codigo aleatorio, sobre todo cuando aumentas TAM_CODIGO a 26
+		// (Por ejemplo para jugar al mastermind con el alfabeto)
+		// y, si esta repetido y no admite repetidos,
 		// generar uno nuevo; pues tienes que recorrer todo el codigo cada vez
 		tColor tmpArr[INCORRECTO];
 		// Primero creamos un array con TODOS los elementos del enum (ordenados)
@@ -104,12 +144,71 @@ void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
 	}
 }
 
+bool jugarRonda(tCodigo secreto, tCodigo hipotesis){
+	int colocados = 0, descolocados = 0;
+	pedirCodigo(hipotesis);
+	compararCodigos(secreto, hipotesis, colocados, descolocados);
+	cout << "Colocados: " << colocados << "; mal colocados: " << descolocados << endl;
+	return !(colocados == TAM_CODIGO);
+}
+
+void jugarPartida(bool admiteRepetidos = false){ // Default false para debug
+	tCodigo secreto, hipotesis;
+	int intentos = 1;
+	codigoAleatorio(secreto, admiteRepetidos);
+
+	cout << "DEBUG: Secreto: " << code2str(secreto) << endl;
+
+	while(jugarRonda(secreto, hipotesis)) intentos++;
+
+	cout << "Enhorabuena! Lo encontraste!" << endl;
+	cout << "Te ha costado " << intentos << " intento(s)." << endl;
+}
+
+int seleccion(int minimo, int maximo){
+	// Usada cada vez que se debe hacer la selección en un menú
+	int response;
+
+	cout << "Elige una opción: ";
+	cin >> response;
+	// Ver http://www.cplusplus.com/reference/istream/istream/
+	while(!cin || !(minimo <= response && response <= maximo)){
+		cin.clear();
+		cin.ignore();
+		cout << "Opción incorrecta. Prueba otra vez: ";
+		cin >> response;
+	}
+
+	return response;
+}
+
+void mainMenu(){
+	bool salir = false;
+	cout << "Descubre el código secreto! En cada partida, pensaré un código de" << endl
+		 << "colores que tendrás que adivinar. En cada intento que hagas te" << endl
+		 << "daré pistas, diciéndote cuantos colores de los que has dicho están" << endl
+		 << "bien colocados, y cuantos no" << endl;
+
+	do{
+		cout << "1. Jugar con un código sin colores repetidos" << endl;
+		cout << "2. Jugar con un código con colores repetidos" << endl;
+		cout << endl << "0. Salir" << endl;
+
+		switch(seleccion(0,2)){
+			case 0: salir = true; break;
+			case 1: jugarPartida(false); break;
+			case 2: jugarPartida(true); break;
+		}
+	}while(!salir);
+
+	cout << "Adios!" << endl;
+}
+
 int main(){
 	srand(time(NULL));
 
 	// Testing
-	tCodigo codigo;
-	codigoAleatorio(codigo, false);
+	mainMenu();
 
 	return 0;
 }
