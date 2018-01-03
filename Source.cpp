@@ -1,10 +1,6 @@
 #include <iostream>
 #include <cstdlib> // Para random
 #include <string> // Para pedir datos al usuario
-#include <vector> // Para la versión dos de la práctica
-// TODO: Borrar ctime
-#include <ctime> // Para hacer pruebas.
-
 
 using namespace std;
 
@@ -13,18 +9,10 @@ typedef enum { ROJO, AZUL, VERDE, AMARILLO, MARRON, BLANCO, INCORRECTO } tColor;
 typedef tColor tCodigo[TAM_CODIGO];
 
 // Version 2
-/* Siendo p el tamaño del codigo y n el numero de colores
- * Combinaciones sin repetición n! / (p! (n-p)!)
- * Combinaciones con repetición (n+p-1)! / (p!(n-1)!)
- * Para p = 4, n = 6: sr = 15, cr = 7560
- */
-
-// Sinceramente, yo haría un
-// typedef struct {tCodigo codigo; bool posible} tcodigoPosible;
-// Y un vector<tcodigoPosible>
-// const unsigned int CODIGOS_POSIBLES = 7560;
-typedef vector<tCodigo> tCodigos;
-// typedef vector<bool> tCodigosPosibles; // No creo que esto sea necesario
+// CODIGOS_POSIBLES = pow(INCORRECTO, TAM_CODIGO);
+const unsigned int CODIGOS_POSIBLES = 1296;
+// Al hacer que el codigo sirva de indice, nos ahorramos un array, y MAZO de memoria, tirando de UAL
+typedef bool tCodigosPosibles[CODIGOS_POSIBLES];
 
 char color2char(tColor color){
 	char c;
@@ -144,6 +132,55 @@ void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
 	}
 }
 
+void dec2code(int dec, tCodigo codigo){
+	// Lo que hacemos es convertir un numero decimal a código,
+	// como un cambio de base, siendo el numero maximo de digitos
+	// TAM_CODIGO
+	// Así podemos usar, en un array, el 'código' como índice
+
+	// Primero, vamos a ponerlo a 0
+	for (unsigned int i = 0; i < TAM_CODIGO; i++){
+		codigo[i] = static_cast<tColor>(0);
+	}
+
+
+	int i = 1, r;
+	while(dec != 0){
+
+		r = dec % INCORRECTO;
+		dec = dec / INCORRECTO;
+
+		codigo[TAM_CODIGO - i] = static_cast<tColor>(r);
+
+		i++;
+	}
+}
+
+void inicializaIA(bool repetidosPermitidos, tCodigosPosibles posibles){
+	// Ponemos TODO el array posibles a true
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		posibles[i] = true;
+		// Ya que estamos recorriendo esto, vamos a eliminar los repetidos
+		if(!repetidosPermitidos){
+			tCodigo tmp;
+			int count[INCORRECTO] = {0};
+			dec2code(i, tmp);
+
+			for(unsigned int j = 0; j < TAM_CODIGO && posibles[i]; j++){
+				posibles[i] = ++count[tmp[j]] <= 1;
+			}
+		}
+	}
+}
+
+void tachaIncompatibles(const tCodigo codigo, tCodigo respuesta, tCodigosPosibles posibles){
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		if(posibles[i]){
+
+		}
+	}
+}
+
 bool jugarRonda(tCodigo secreto, tCodigo hipotesis){
 	int colocados = 0, descolocados = 0;
 	pedirCodigo(hipotesis);
@@ -208,7 +245,16 @@ int main(){
 	srand(time(NULL));
 
 	// Testing
-	mainMenu();
+	// mainMenu();
+
+	tCodigosPosibles tmp;
+	inicializaIA(false, tmp);
+
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		tCodigo ctmp;
+		dec2code(i, ctmp);
+		cout << code2str(ctmp) << ": " << tmp[i] << endl;
+	}
 
 	return 0;
 }
