@@ -8,11 +8,22 @@ const unsigned short int TAM_CODIGO = 4;
 typedef enum { ROJO, AZUL, VERDE, AMARILLO, MARRON, BLANCO, INCORRECTO } tColor;
 typedef tColor tCodigo[TAM_CODIGO];
 
+// Así se puede retornar, y es más sencillo que pasar dos variables (en mi opinión)
+struct tRespuesta {
+	unsigned int colocados = 0;
+	unsigned int descolocados = 0;
+};
+
 // Version 2
 // CODIGOS_POSIBLES = pow(INCORRECTO, TAM_CODIGO);
 const unsigned int CODIGOS_POSIBLES = 1296;
 // Al hacer que el codigo sirva de indice, nos ahorramos un array, y MAZO de memoria, tirando de UAL
 typedef bool tCodigosPosibles[CODIGOS_POSIBLES];
+
+// Vamos a definir el operador == para nuestro struct tRespuesta
+bool operator==(tRespuesta r1, tRespuesta r2){
+	return r1.colocados == r2.colocados && r1.descolocados == r2.descolocados;
+}
 
 char color2char(tColor color){
 	char c;
@@ -85,18 +96,20 @@ void pedirCodigo(tCodigo codigo){
 	}
 }
 
-void compararCodigos(const tCodigo codigo, const tCodigo hipotesis, int& colocados, int& descolocados){
+tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis){
+	tRespuesta respuesta;
 	for (unsigned int i = 0; i < TAM_CODIGO; i++){
 		for (unsigned int j = 0; j < TAM_CODIGO; j++){
 			if(codigo[i] == hipotesis[j]){
 				if (i == j){
-					colocados++;
+					respuesta.colocados++;
 				} else{
-					descolocados++;
+					respuesta.descolocados++;
 				}
 			}
 		}
 	}
+	return respuesta;
 }
 
 void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
@@ -137,6 +150,8 @@ void dec2code(int dec, tCodigo codigo){
 	// como un cambio de base, siendo el numero maximo de digitos
 	// TAM_CODIGO
 	// Así podemos usar, en un array, el 'código' como índice
+	// Codigos útiles:
+	// VVAA = 525, BZMR = 1140;
 
 	// Primero, vamos a ponerlo a 0
 	for (unsigned int i = 0; i < TAM_CODIGO; i++){
@@ -162,41 +177,58 @@ void inicializaIA(bool repetidosPermitidos, tCodigosPosibles posibles){
 		posibles[i] = true;
 		// Ya que estamos recorriendo esto, vamos a eliminar los repetidos
 		if(!repetidosPermitidos){
-			tCodigo tmp;
-			int count[INCORRECTO] = {0};
-			dec2code(i, tmp);
+			tCodigo tmp; // Creamos un codigo temporal
+			int count[INCORRECTO] = {0}; // Y un array de enteros con la frecuencia en la que aparece cada color
+			dec2code(i, tmp); // Convertimos el entero a codigo
 
 			for(unsigned int j = 0; j < TAM_CODIGO && posibles[i]; j++){
-				posibles[i] = ++count[tmp[j]] <= 1;
+				posibles[i] = ++count[tmp[j]] <= 1; // false si el color está más de una vez, salimos del bucle y se queda en false
 			}
 		}
 	}
 }
 
-void tachaIncompatibles(const tCodigo codigo, tCodigo respuesta, tCodigosPosibles posibles){
+void tachaIncompatibles(const tCodigo codigo, tRespuesta respuesta, tCodigosPosibles posibles){
 	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
 		if(posibles[i]){
-
+			tCodigo tmpCod;
+			dec2code(i, tmpCod);
+			tRespuesta tmpRes = compararCodigos(codigo, tmpCod);
+			posibles[i] = respuesta == tmpRes;
 		}
 	}
 }
 
-bool jugarRonda(tCodigo secreto, tCodigo hipotesis){
-	int colocados = 0, descolocados = 0;
-	pedirCodigo(hipotesis);
-	compararCodigos(secreto, hipotesis, colocados, descolocados);
-	cout << "Colocados: " << colocados << "; mal colocados: " << descolocados << endl;
-	return !(colocados == TAM_CODIGO);
+bool quedaSoloUnoPosible(const tCodigosPosibles posibles){
+	int cnt = 0;
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES && cnt <= 1; i++){
+		if(posibles[i]) cnt++;
+	}
+
+	return cnt == 1;
 }
 
-void jugarPartida(bool admiteRepetidos = false){ // Default false para debug
+bool jugarRonda(tCodigo secreto, tCodigo hipotesis, tCodigosPosibles posibles){
+	pedirCodigo(hipotesis);
+	tRespuesta respuesta = compararCodigos(secreto, hipotesis);
+	tachaIncompatibles(hipotesis, respuesta, posibles);
+	cout << "Colocados: " << respuesta.colocados << "; mal colocados: " << respuesta.descolocados << endl;
+	if(quedaSoloUnoPosible(posibles)) cout << "Venga, que ya deberías saberlo" << endl;
+	return !(respuesta.colocados == TAM_CODIGO);
+}
+
+void jugarPartida(bool admiteRepetidos){
 	tCodigo secreto, hipotesis;
+	tCodigosPosibles posibles;
 	int intentos = 1;
-	codigoAleatorio(secreto, admiteRepetidos);
+
+	inicializaIA(admiteRepetidos, posibles);
+	// codigoAleatorio(secreto, admiteRepetidos);
+	dec2code(525, secreto);
 
 	cout << "DEBUG: Secreto: " << code2str(secreto) << endl;
 
-	while(jugarRonda(secreto, hipotesis)) intentos++;
+	while(jugarRonda(secreto, hipotesis, posibles)) intentos++;
 
 	cout << "Enhorabuena! Lo encontraste!" << endl;
 	cout << "Te ha costado " << intentos << " intento(s)." << endl;
@@ -245,8 +277,9 @@ int main(){
 	srand(time(NULL));
 
 	// Testing
-	// mainMenu();
+	mainMenu();
 
+	/*
 	tCodigosPosibles tmp;
 	inicializaIA(false, tmp);
 
@@ -254,7 +287,7 @@ int main(){
 		tCodigo ctmp;
 		dec2code(i, ctmp);
 		cout << code2str(ctmp) << ": " << tmp[i] << endl;
-	}
+	}*/
 
 	return 0;
 }
