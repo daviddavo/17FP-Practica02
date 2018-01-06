@@ -97,6 +97,7 @@ void pedirCodigo(tCodigo codigo){
 }
 
 tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis){
+	// TODO: Con el código con colores repetidos, a veces cuenta 2 veces la misma ficha
 	tRespuesta respuesta;
 	for (unsigned int i = 0; i < TAM_CODIGO; i++){
 		for (unsigned int j = 0; j < TAM_CODIGO; j++){
@@ -151,7 +152,7 @@ void dec2code(int dec, tCodigo codigo){
 	// TAM_CODIGO
 	// Así podemos usar, en un array, el 'código' como índice
 	// Codigos útiles:
-	// VVAA = 525, BZMR = 1140;
+	// VVAA = 525, AAVV = 770, BZMR = 1140;
 
 	// Primero, vamos a ponerlo a 0
 	for (unsigned int i = 0; i < TAM_CODIGO; i++){
@@ -217,23 +218,6 @@ bool jugarRonda(tCodigo secreto, tCodigo hipotesis, tCodigosPosibles posibles){
 	return !(respuesta.colocados == TAM_CODIGO);
 }
 
-void jugarPartida(bool admiteRepetidos){
-	tCodigo secreto, hipotesis;
-	tCodigosPosibles posibles;
-	int intentos = 1;
-
-	inicializaIA(admiteRepetidos, posibles);
-	// codigoAleatorio(secreto, admiteRepetidos);
-	dec2code(525, secreto);
-
-	cout << "DEBUG: Secreto: " << code2str(secreto) << endl;
-
-	while(jugarRonda(secreto, hipotesis, posibles)) intentos++;
-
-	cout << "Enhorabuena! Lo encontraste!" << endl;
-	cout << "Te ha costado " << intentos << " intento(s)." << endl;
-}
-
 int seleccion(int minimo, int maximo){
 	// Usada cada vez que se debe hacer la selección en un menú
 	int response;
@@ -251,8 +235,70 @@ int seleccion(int minimo, int maximo){
 	return response;
 }
 
+void jugarPartida(bool admiteRepetidos){
+	tCodigo secreto, hipotesis;
+	tCodigosPosibles posibles;
+
+	int intentos = 1;
+
+	inicializaIA(admiteRepetidos, posibles);
+	// codigoAleatorio(secreto, admiteRepetidos);
+	dec2code(525, secreto);
+
+	cout << "DEBUG: Secreto: " << code2str(secreto) << endl;
+
+	while(jugarRonda(secreto, hipotesis, posibles)) intentos++;
+
+	cout << "Enhorabuena! Lo encontraste!" << endl;
+	cout << "Te ha costado " << intentos << " intento(s)." << endl;
+}
+
+bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
+	// No hay ninguna necesidad de que sea un codigo aleatorio
+	bool mentiroso = false;
+	unsigned int i = 0;
+	while(!posibles[i] && i < CODIGOS_POSIBLES) i++;
+	if(i != CODIGOS_POSIBLES){
+		dec2code(i, hipotesis);
+	}else{
+		mentiroso = true;
+	}
+
+	return mentiroso;
+}
+
+void jugarIA(bool admiteRepetidos){
+	tCodigo hipotesis;
+	tCodigosPosibles posibles;
+	tRespuesta respuesta;
+	bool fin = false;
+
+	inicializaIA(admiteRepetidos, posibles);
+	do{
+		if(elegirCodigo(hipotesis, posibles)){
+			cout << "¡Tramposo! En alguna pregunta me has mentido. Paramos la partida." << endl;
+			fin = true;
+		}else if(quedaSoloUnoPosible(posibles)){
+			cout << "¡Lo tengo! Es " << code2str(hipotesis) << endl;
+			fin = true;
+		}else{
+			cout << "Apuesto por " << code2str(hipotesis) << endl;
+			cout << "¿Cuantos colores están bien colocados? ";
+			cin >> respuesta.colocados;
+			if (respuesta.colocados == TAM_CODIGO){
+				cout << "Vaya, he acertado de casualidad!" << endl;
+				fin = true;
+			}else{
+				cout << "¿Cuantos colores están mal colocados? ";
+				cin >> respuesta.descolocados;
+				tachaIncompatibles(hipotesis, respuesta, posibles);
+			}
+		}
+	}while(!fin);
+}
+
 void mainMenu(){
-	bool salir = false;
+	bool salir = false, repetidos;
 	cout << "Descubre el código secreto! En cada partida, pensaré un código de" << endl
 		 << "colores que tendrás que adivinar. En cada intento que hagas te" << endl
 		 << "daré pistas, diciéndote cuantos colores de los que has dicho están" << endl
@@ -265,8 +311,18 @@ void mainMenu(){
 
 		switch(seleccion(0,2)){
 			case 0: salir = true; break;
-			case 1: jugarPartida(false); break;
-			case 2: jugarPartida(true); break;
+			case 1: repetidos = false; break;
+			case 2: repetidos = true; break;
+		}
+		if(!salir){
+			cout << "¿Quieres pensar tú el código secreto?" << endl << endl
+				 << "1. Sí" << endl
+				 << "2. No" << endl;
+			if(bool(seleccion(1, 2) - 1)){
+				jugarPartida(repetidos);
+			}else{
+				jugarIA(repetidos);
+			}
 		}
 	}while(!salir);
 
@@ -278,6 +334,13 @@ int main(){
 
 	// Testing
 	mainMenu();
+	// cout << !bool(seleccion(1, 2) - 1) << endl;
+
+	/*tCodigo c1, c2;
+	dec2code(770, c1);
+	dec2code(525, c2);
+	tRespuesta respuesta = compararCodigos(c1, c2);
+	*/
 
 	/*
 	tCodigosPosibles tmp;
