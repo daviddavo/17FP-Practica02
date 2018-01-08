@@ -97,19 +97,26 @@ void pedirCodigo(tCodigo codigo){
 }
 
 tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis){
-	// TODO: Con el código con colores repetidos, a veces cuenta 2 veces la misma ficha
+	// No viene definido en las reglas del juego como se deben contar los colores, así que seguiremos
+	// Usando el método de Dr. Donald Knuth [1]
 	tRespuesta respuesta;
-	for (unsigned int i = 0; i < TAM_CODIGO; i++){
-		for (unsigned int j = 0; j < TAM_CODIGO; j++){
-			if(codigo[i] == hipotesis[j]){
-				if (i == j){
-					respuesta.colocados++;
-				} else{
+	bool usado[INCORRECTO] {false};
+
+	for(unsigned int j = 0; j < TAM_CODIGO; j++){
+		if(codigo[j] == hipotesis[j]){
+			respuesta.colocados++;
+			usado[j] = true;
+		}
+		else{
+			for(unsigned int k = 0; k < TAM_CODIGO; k++){
+				if(codigo[j] == hipotesis[k] && !usado[k]){
 					respuesta.descolocados++;
+					usado[k] = true;
 				}
 			}
 		}
 	}
+
 	return respuesta;
 }
 
@@ -334,13 +341,15 @@ int main(){
 
 	// Testing
 	mainMenu();
-	// cout << !bool(seleccion(1, 2) - 1) << endl;
 
-	/*tCodigo c1, c2;
-	dec2code(770, c1);
-	dec2code(525, c2);
+	/*
+	tCodigo c1, c2;
+	codigoAleatorio(c1, true);
+	codigoAleatorio(c2, true);
 	tRespuesta respuesta = compararCodigos(c1, c2);
-	*/
+
+	cout << "C1: " << code2str(c1) << ", C2: " << code2str(c2) << " C/D: " << respuesta.colocados << ", " << respuesta.descolocados << endl;
+	/*
 
 	/*
 	tCodigosPosibles tmp;
@@ -356,7 +365,6 @@ int main(){
 }
 
 /*	BIBLIOGRAFIA:
- * - http://mathworld.wolfram.com/Mastermind.html
- * - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3022521/
- * - http://colorcode.laebisch.com/links/Donald.E.Knuth.pdf
+ * - Dr. Donald Knuth - The Computer as Master Mind
+ * (https://www.cs.uni.edu/~wallingf/teaching/cs3530/resources/knuth-mastermind.pdf)
  */
