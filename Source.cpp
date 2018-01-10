@@ -17,7 +17,6 @@ struct tRespuesta {
 // Version 2
 // CODIGOS_POSIBLES = pow(INCORRECTO, TAM_CODIGO);
 const unsigned int CODIGOS_POSIBLES = 1296;
-// Al hacer que el codigo sirva de indice, nos ahorramos un array, y MAZO de memoria, tirando de UAL
 typedef bool tCodigosPosibles[CODIGOS_POSIBLES];
 
 // Vamos a definir el operador == para nuestro struct tRespuesta
@@ -100,22 +99,23 @@ tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis){
 	// No viene definido en las reglas del juego como se deben contar los colores, así que seguiremos
 	// Usando el método de Dr. Donald Knuth [1]
 	tRespuesta respuesta;
-	bool usado[INCORRECTO] {false};
+	unsigned int x[INCORRECTO] {0}; // Guarda las frecuencias de cada color de CODIGO
+	unsigned int y[INCORRECTO] {0}; // Guarda las frecuencias de cada color de HIPOTESIS
 
+	// Contamos colocados
 	for(unsigned int j = 0; j < TAM_CODIGO; j++){
-		if(codigo[j] == hipotesis[j]){
-			respuesta.colocados++;
-			usado[j] = true;
-		}
-		else{
-			for(unsigned int k = 0; k < TAM_CODIGO; k++){
-				if(codigo[j] == hipotesis[k] && !usado[k]){
-					respuesta.descolocados++;
-					usado[k] = true;
-				}
-			}
-		}
+		x[codigo[j]]++;
+		y[hipotesis[j]]++;
+		if(codigo[j] == hipotesis[j]) respuesta.colocados++;
 	}
+	// Hacemos la operación
+	// descolocados + colocados = SUMATORIO desde 0 a N de min(codigo[i], hipotesis[i]), donde N es el numero de colores
+	// Por lo tanto descolocados = SUMATORIO - colocados
+	int S = 0;
+	for(unsigned int i = 0; i < INCORRECTO; i++){
+		S += min(codigo[i], hipotesis[i]);
+	}
+	respuesta.descolocados = S - respuesta.colocados;
 
 	return respuesta;
 }
@@ -196,13 +196,24 @@ void inicializaIA(bool repetidosPermitidos, tCodigosPosibles posibles){
 	}
 }
 
-void tachaIncompatibles(const tCodigo codigo, tRespuesta respuesta, tCodigosPosibles posibles){
+// Usado para calcular cuantos SERÍAN eliminados en una situación dada
+unsigned int contarIncompatibles(const tCodigo codigo, const tRespuesta respuesta, const tCodigosPosibles posibles){
+	unsigned int cnt = 0;
 	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
-		if(posibles[i]){
+		tCodigo tmpCod;
+		dec2code(i, tmpCod);
+		if(posibles[i] && respuesta == compararCodigos(codigo, tmpCod)) cnt++;
+	}
+
+	return cnt;
+}
+
+void tachaIncompatibles(const tCodigo codigo, const tRespuesta respuesta, tCodigosPosibles posibles){
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		if(posibles[i]){ // Si el codigo está en el array
 			tCodigo tmpCod;
-			dec2code(i, tmpCod);
-			tRespuesta tmpRes = compararCodigos(codigo, tmpCod);
-			posibles[i] = respuesta == tmpRes;
+			dec2code(i, tmpCod); // Lo convertimos a código
+			posibles[i] = respuesta == compararCodigos(codigo, tmpCod); // Comparamos las respuestas
 		}
 	}
 }
@@ -260,18 +271,62 @@ void jugarPartida(bool admiteRepetidos){
 	cout << "Te ha costado " << intentos << " intento(s)." << endl;
 }
 
-bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
-	// No hay ninguna necesidad de que sea un codigo aleatorio
-	bool mentiroso = false;
-	unsigned int i = 0;
-	while(!posibles[i] && i < CODIGOS_POSIBLES) i++;
-	if(i != CODIGOS_POSIBLES){
-		dec2code(i, hipotesis);
-	}else{
-		mentiroso = true;
+// Y si lo paso como referencia y la hago booleana? Retorna false cuando no se puede hacer la siguiente respuesta
+bool siguienteRespuesta(tRespuesta & anterior){
+	anterior.colocados++;
+	if(anterior.colocados + anterior.descolocados > TAM_CODIGO){
+		anterior.colocados = 0;
+		anterior.descolocados = anterior.descolocados + 1;
 	}
 
-	return mentiroso;
+	return anterior.descolocados <= TAM_CODIGO;
+}
+
+int maxIndex(unsigned int scores[CODIGOS_POSIBLES], int tope=CODIGOS_POSIBLES){
+	unsigned int maxn = 0, maxi = 0;
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		if(scores[i] > maxn && maxn < tope){
+			maxi = i;
+			maxn = scores[i];
+		}
+	}
+
+	return maxi;
+}
+
+bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
+	// Usando el algoritmo propuesto por Dr. Donald E. Knuth en
+	// The Computer as Mastermind ( 1977 )
+
+	unsigned int nPosibles = 0;
+	for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++) if(posibles[i]) nPosibles++; // Cuenta el numero de posibles
+
+	unsigned int scores[CODIGOS_POSIBLES] {nPosibles}; // Almacena el minimax de cada código
+	for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		for (unsigned int j = 0; j < CODIGOS_POSIBLES; j++){
+			// Calcular las posibilidades para cada codigo de posibles
+			// Min eliminados = Numero elementos en posibles - maxhc
+			if(posibles[j]){
+				tCodigo tmpCode;
+				tRespuesta tmpRespuesta;
+				unsigned int maxhc = 0; // Maximo de posibilidades que se eliminarían...
+
+				dec2code(j, tmpCode);
+				// ... probando TODAS las respuestas
+				do{
+					unsigned maxhc = max(maxhc, contarIncompatibles(tmpCode, tmpRespuesta, posibles));
+				}while(siguienteRespuesta(tmpRespuesta));
+
+				scores[j] = nPosibles - maxhc;
+			}
+		}
+	}
+
+	// Ya hemos generado el array, ahora a coger el que más 'score' tiene
+
+
+
+	return true;
 }
 
 void jugarIA(bool admiteRepetidos){
@@ -338,9 +393,18 @@ void mainMenu(){
 
 int main(){
 	srand(time(NULL));
+	// Sólo necesario en Windows
+	setlocale(LC_ALL,"spanish");
 
 	// Testing
-	mainMenu();
+	// mainMenu();
+
+	/*
+	tRespuesta prueba;
+	do{
+		cout << "D/C: " << prueba.descolocados << ", " << prueba.colocados << endl;
+	}while(siguienteRespuesta(prueba));
+	*/
 
 	/*
 	tCodigo c1, c2;
@@ -349,7 +413,7 @@ int main(){
 	tRespuesta respuesta = compararCodigos(c1, c2);
 
 	cout << "C1: " << code2str(c1) << ", C2: " << code2str(c2) << " C/D: " << respuesta.colocados << ", " << respuesta.descolocados << endl;
-	/*
+	*/
 
 	/*
 	tCodigosPosibles tmp;
@@ -365,6 +429,8 @@ int main(){
 }
 
 /*	BIBLIOGRAFIA:
- * - Dr. Donald Knuth - The Computer as Master Mind
+ * - Kenneth Binmore - Game Theory: A very short introduction (2007)
+ * ( ISBN: 9780199218462 )
+ * - Dr. Donald Knuth - The Computer as Master Mind (1977)
  * (https://www.cs.uni.edu/~wallingf/teaching/cs3530/resources/knuth-mastermind.pdf)
  */
