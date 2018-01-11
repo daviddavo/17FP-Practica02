@@ -19,6 +19,12 @@ struct tRespuesta {
 const unsigned int CODIGOS_POSIBLES = 1296;
 typedef bool tCodigosPosibles[CODIGOS_POSIBLES];
 
+// Versión '4'
+struct tScodigo{
+	unsigned int score;
+	unsigned int codigo;
+};
+
 // Vamos a definir el operador == para nuestro struct tRespuesta
 bool operator==(tRespuesta r1, tRespuesta r2){
 	return r1.colocados == r2.colocados && r1.descolocados == r2.descolocados;
@@ -282,6 +288,7 @@ bool siguienteRespuesta(tRespuesta & anterior){
 	return anterior.descolocados <= TAM_CODIGO;
 }
 
+/*
 int maxIndex(unsigned int scores[CODIGOS_POSIBLES], int tope=CODIGOS_POSIBLES){
 	unsigned int maxn = 0, maxi = 0;
 	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
@@ -292,7 +299,7 @@ int maxIndex(unsigned int scores[CODIGOS_POSIBLES], int tope=CODIGOS_POSIBLES){
 	}
 
 	return maxi;
-}
+}*/
 
 bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
 	// Usando el algoritmo propuesto por Dr. Donald E. Knuth en
@@ -301,8 +308,11 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
 	unsigned int nPosibles = 0;
 	for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++) if(posibles[i]) nPosibles++; // Cuenta el numero de posibles
 
-	unsigned int scores[CODIGOS_POSIBLES] {nPosibles}; // Almacena el minimax de cada código
-	for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+	if(nPosibles > 0){
+		tScodigo scores[CODIGOS_POSIBLES]; // Almacena el minimax de cada código
+		// Hacemos que el codigo sea igual a i (Para cuando lo ordenemos luego no perderlo)
+		for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++) scores[i].codigo = i;
+
 		for (unsigned int j = 0; j < CODIGOS_POSIBLES; j++){
 			// Calcular las posibilidades para cada codigo de posibles
 			// Min eliminados = Numero elementos en posibles - maxhc
@@ -317,16 +327,25 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
 					unsigned maxhc = max(maxhc, contarIncompatibles(tmpCode, tmpRespuesta, posibles));
 				}while(siguienteRespuesta(tmpRespuesta));
 
-				scores[j] = nPosibles - maxhc;
+				scores[j].score = nPosibles - maxhc;
 			}
 		}
+		ordenarScores(scores);
+		// Intentamos retornar un elemento del conjunto
+		// que tiene mismo 'score' pero que pertenezca a posibles
+		bool buscarFuera = true; // Por si no encontramos uno que pertenezca a posibles
+		for(unsigned int i = 0; i < CODIGOS_POSIBLES && scores[i] == scores[i-1]; i++){
+			if(posibles[scores[i-1].codigo]){
+				dec2code(scores[i-1].codigo, hipotesis);
+				buscarFuera = false;
+				break;
+			}
+		}
+
+		if(buscarFuera) dec2code(scores[0].codigo, hipotesis);
 	}
 
-	// Ya hemos generado el array, ahora a coger el que más 'score' tiene
-
-
-
-	return true;
+	return nPosibles > 0;
 }
 
 void jugarIA(bool admiteRepetidos){
