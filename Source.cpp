@@ -119,7 +119,7 @@ tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis){
 	// Por lo tanto descolocados = SUMATORIO - colocados
 	int S = 0;
 	for(unsigned int i = 0; i < INCORRECTO; i++){
-		S += min(codigo[i], hipotesis[i]);
+		S += min(x[i], y[i]);
 	}
 	respuesta.descolocados = S - respuesta.colocados;
 
@@ -206,20 +206,25 @@ void inicializaIA(bool repetidosPermitidos, tCodigosPosibles posibles){
 unsigned int contarIncompatibles(const tCodigo codigo, const tRespuesta respuesta, const tCodigosPosibles posibles){
 	unsigned int cnt = 0;
 	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
-		tCodigo tmpCod;
-		dec2code(i, tmpCod);
-		if(posibles[i] && respuesta == compararCodigos(codigo, tmpCod)) cnt++;
+		if(posibles[i]){
+			tCodigo tmpCod;
+			dec2code(i, tmpCod);
+
+			if(respuesta == compararCodigos(codigo, tmpCod)) cnt++; // El && ya tiene el orden de preferencia, pero si no da un error raro
+		}
 	}
 
 	return cnt;
 }
 
-void tachaIncompatibles(const tCodigo codigo, const tRespuesta respuesta, tCodigosPosibles posibles){
+void tachaIncompatibles(tCodigo codigo, tRespuesta respuesta, tCodigosPosibles posibles){
+
 	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
 		if(posibles[i]){ // Si el codigo está en el array
 			tCodigo tmpCod;
 			dec2code(i, tmpCod); // Lo convertimos a código
-			posibles[i] = respuesta == compararCodigos(codigo, tmpCod); // Comparamos las respuestas
+			tRespuesta r2 = compararCodigos(codigo, tmpCod); // DEBUG
+			posibles[i] = respuesta.colocados == r2.colocados && respuesta.descolocados == r2.descolocados; // Comparamos las respuestas
 		}
 	}
 }
@@ -301,11 +306,23 @@ int maxIndex(unsigned int scores[CODIGOS_POSIBLES], int tope=CODIGOS_POSIBLES){
 	return maxi;
 }*/
 
+void ordenarScores(tScodigo scores[CODIGOS_POSIBLES]){
+	// Algoritmo simplecillo que se me ha ocurrido, no será lo más eficiente, pero furula
+	for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+		for(unsigned int j = i; j > 0 && scores[j-1].score < scores[j].score; j--){
+			tScodigo tmp = scores[j-1];
+			scores[j-1] = scores[j];
+			scores[j] = tmp;
+		}
+	}
+}
+
 bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
 	// Usando el algoritmo propuesto por Dr. Donald E. Knuth en
 	// The Computer as Mastermind ( 1977 )
 
 	unsigned int nPosibles = 0;
+
 	for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++) if(posibles[i]) nPosibles++; // Cuenta el numero de posibles
 
 	if(nPosibles > 0){
@@ -316,36 +333,37 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
 		for (unsigned int j = 0; j < CODIGOS_POSIBLES; j++){
 			// Calcular las posibilidades para cada codigo de posibles
 			// Min eliminados = Numero elementos en posibles - maxhc
+			unsigned int maxhc = 0; // Maximo de posibilidades que se eliminarían...
 			if(posibles[j]){
 				tCodigo tmpCode;
 				tRespuesta tmpRespuesta;
-				unsigned int maxhc = 0; // Maximo de posibilidades que se eliminarían...
 
 				dec2code(j, tmpCode);
 				// ... probando TODAS las respuestas
 				do{
-					unsigned maxhc = max(maxhc, contarIncompatibles(tmpCode, tmpRespuesta, posibles));
+					maxhc = max(maxhc, contarIncompatibles(tmpCode, tmpRespuesta, posibles));
 				}while(siguienteRespuesta(tmpRespuesta));
-
-				scores[j].score = nPosibles - maxhc;
 			}
+			scores[j].score = nPosibles - maxhc;
 		}
+
 		ordenarScores(scores);
+
 		// Intentamos retornar un elemento del conjunto
 		// que tiene mismo 'score' pero que pertenezca a posibles
 		bool buscarFuera = true; // Por si no encontramos uno que pertenezca a posibles
-		for(unsigned int i = 0; i < CODIGOS_POSIBLES && scores[i] == scores[i-1]; i++){
-			if(posibles[scores[i-1].codigo]){
-				dec2code(scores[i-1].codigo, hipotesis);
+		// Empieza en 1 porque el indice 0 no se ordena
+		for(unsigned int i = 1; i < CODIGOS_POSIBLES && scores[i+1].score == scores[i].score && buscarFuera; i++){
+			if(posibles[scores[i].codigo]){
+				dec2code(scores[i].codigo, hipotesis);
 				buscarFuera = false;
-				break;
 			}
 		}
 
 		if(buscarFuera) dec2code(scores[0].codigo, hipotesis);
 	}
 
-	return nPosibles > 0;
+	return nPosibles == 0;
 }
 
 void jugarIA(bool admiteRepetidos){
@@ -360,6 +378,12 @@ void jugarIA(bool admiteRepetidos){
 			cout << "¡Tramposo! En alguna pregunta me has mentido. Paramos la partida." << endl;
 			fin = true;
 		}else if(quedaSoloUnoPosible(posibles)){
+			for(unsigned int i = 0; i < CODIGOS_POSIBLES; i++){
+				if(posibles[i]){
+					dec2code(i, hipotesis);
+					break;
+				}
+			}
 			cout << "¡Lo tengo! Es " << code2str(hipotesis) << endl;
 			fin = true;
 		}else{
@@ -416,7 +440,15 @@ int main(){
 	setlocale(LC_ALL,"spanish");
 
 	// Testing
-	// mainMenu();
+	mainMenu();
+
+	/*
+	tRespuesta respuesta;
+	respuesta.descolocados = 4;
+	tCodigo codigo = {ROJO, ROJO, VERDE, VERDE};
+	tCodigosPosibles posibles {true};
+	tachaIncompatibles(codigo, respuesta, posibles);
+	*/
 
 	/*
 	tRespuesta prueba;
@@ -433,6 +465,7 @@ int main(){
 
 	cout << "C1: " << code2str(c1) << ", C2: " << code2str(c2) << " C/D: " << respuesta.colocados << ", " << respuesta.descolocados << endl;
 	*/
+
 
 	/*
 	tCodigosPosibles tmp;
