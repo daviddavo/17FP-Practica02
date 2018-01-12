@@ -223,8 +223,7 @@ void tachaIncompatibles(tCodigo codigo, tRespuesta respuesta, tCodigosPosibles p
 		if(posibles[i]){ // Si el codigo está en el array
 			tCodigo tmpCod;
 			dec2code(i, tmpCod); // Lo convertimos a código
-			tRespuesta r2 = compararCodigos(codigo, tmpCod); // DEBUG
-			posibles[i] = respuesta.colocados == r2.colocados && respuesta.descolocados == r2.descolocados; // Comparamos las respuestas
+			posibles[i] = respuesta == compararCodigos(codigo, tmpCod); // Comparamos las respuestas
 		}
 	}
 }
@@ -353,14 +352,14 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles){
 		// que tiene mismo 'score' pero que pertenezca a posibles
 		bool buscarFuera = true; // Por si no encontramos uno que pertenezca a posibles
 		// Empieza en 1 porque el indice 0 no se ordena
-		for(unsigned int i = 1; i < CODIGOS_POSIBLES && scores[i+1].score == scores[i].score && buscarFuera; i++){
+		for(unsigned int i = 1; i < CODIGOS_POSIBLES && buscarFuera; i++){ // && scores[i+1].score == scores[i].score
 			if(posibles[scores[i].codigo]){
 				dec2code(scores[i].codigo, hipotesis);
 				buscarFuera = false;
 			}
 		}
 
-		if(buscarFuera) dec2code(scores[0].codigo, hipotesis);
+		if(buscarFuera) dec2code(scores[1].codigo, hipotesis);
 	}
 
 	return nPosibles == 0;
