@@ -1,10 +1,11 @@
 #include <iostream>
 #include <cstdlib> // Para random
 #include <string> // Para pedir datos al usuario
+#include <cmath> // Para calcular codigos posibles
 
 using namespace std;
 
-const unsigned short int TAM_CODIGO = 4;
+constexpr unsigned short int TAM_CODIGO = 4;
 typedef enum { ROJO, AZUL, VERDE, AMARILLO, MARRON, BLANCO, INCORRECTO } tColor;
 typedef tColor tCodigo[TAM_CODIGO];
 
@@ -16,7 +17,7 @@ struct tRespuesta {
 
 // Version 2
 // CODIGOS_POSIBLES = pow(INCORRECTO, TAM_CODIGO);
-const unsigned int CODIGOS_POSIBLES = 1296;
+constexpr unsigned int CODIGOS_POSIBLES = pow((unsigned int)(INCORRECTO), TAM_CODIGO);
 typedef bool tCodigosPosibles[CODIGOS_POSIBLES];
 
 // Versión '4'
@@ -75,9 +76,9 @@ void pedirCodigo(tCodigo codigo){
 	// Primero mostramos la frase
 	cout << "Introduce el codigo (palabra de " << TAM_CODIGO << " letras con alguna de ";
 	for (unsigned int i = 0; i < INCORRECTO-1; i++){
-		cout << color2char(static_cast<tColor>(i)) << ", ";
+		cout << color2char((tColor)(i)) << ", ";
 	}
-	cout << color2char(static_cast<tColor>(INCORRECTO-1)) << "): ";
+	cout << color2char((tColor)(INCORRECTO-1)) << "): ";
 
 	// Y ahora pedimos el codigo, a prueba de errores
 	string line;
@@ -85,7 +86,7 @@ void pedirCodigo(tCodigo codigo){
 
 	// cin.ignore(); // Por si acaso se ha quedado algo en el buffer // Revisar: Por alguna razon se salta el primer caracter
 	getline(cin, line);
-	if (line.length() != TAM_CODIGO){
+	if (line.length() != TAM_CODIGO && !cin.fail()){
 		cout << "El código debe ser de " << TAM_CODIGO << " letras" << endl;
 		pedirCodigo(codigo);
 	}else{
@@ -129,7 +130,7 @@ tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis){
 void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
 	if (admiteRepetidos){
 		for (unsigned int i = 0; i < TAM_CODIGO; i++){
-			codigo[i] = static_cast<tColor>( rand() % INCORRECTO );
+			codigo[i] = (tColor)( rand() % INCORRECTO );
 		}
 	}else{
 		// A pesar de lo complejo que parece, lo he probado con ctime y
@@ -140,7 +141,7 @@ void codigoAleatorio(tCodigo codigo, bool admiteRepetidos){
 		tColor tmpArr[INCORRECTO];
 		// Primero creamos un array con TODOS los elementos del enum (ordenados)
 		for(unsigned int i = 0; i < INCORRECTO; i++){
-			tmpArr[i] = static_cast<tColor>(i);
+			tmpArr[i] = (tColor)(i);
 		}
 
 		// Lo removemos (vamos intercambiando valores mediante una variable temporal)
@@ -169,7 +170,7 @@ void dec2code(int dec, tCodigo codigo){
 
 	// Primero, vamos a ponerlo a 0
 	for (unsigned int i = 0; i < TAM_CODIGO; i++){
-		codigo[i] = static_cast<tColor>(0);
+		codigo[i] = (tColor)(0);
 	}
 
 
@@ -179,7 +180,7 @@ void dec2code(int dec, tCodigo codigo){
 		r = dec % INCORRECTO;
 		dec = dec / INCORRECTO;
 
-		codigo[TAM_CODIGO - i] = static_cast<tColor>(r);
+		codigo[TAM_CODIGO - i] = (tColor)(r);
 
 		i++;
 	}
