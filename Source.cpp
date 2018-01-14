@@ -158,11 +158,11 @@ void pedirCodigo(tCodigo codigo) {
     string line;  // Linea de caracteres introducidos por el usuario
     tColor color;  // Cada color que se introduce en el codigo
 
-    cin.ignore();  // Por si acaso se ha quedado algo en el buffer // Revisar: Por alguna razon se salta el primer caracter
-    getline(cin, line);  // Lee hasta endl
-    if (line.length() != TAM_CODIGO || !cin.fail()) {  // Si el codigo no es de TAM_CODIGO colores o se introducen numeros o cualquier otro valor
-        cin.sync();
-        cin.clear();
+    // cin.ignore();  // Por si acaso se ha quedado algo en el buffer // Revisar: Por alguna razon se salta el primer caracter
+    cin >> line;  // Lee hasta endl
+    if (line.length() != TAM_CODIGO || cin.fail()) {  // Si el codigo no es de TAM_CODIGO colores o se introducen numeros o cualquier otro valor
+        // cin.sync();
+        // cin.clear();
         cout << "El código debe ser de " << TAM_CODIGO << " letras" << endl;
         pedirCodigo(codigo);  // En caso de fallo, pedimos el código recursivamente
     } else {
@@ -339,16 +339,17 @@ bool quedaSoloUnoPosible(const tCodigosPosibles posibles) {
 
 bool jugarRonda(tCodigo secreto, tCodigo hipotesis, tCodigosPosibles posibles) {
     /* Entrada: Codigo secreto (generado por el ordenador) e hipotesis (a rellenar por el usuario), posibles
-     * Salida: True si la partida ha terminado
+     * Salida: True si la partida no ha terminado
      */
     pedirCodigo(hipotesis);
     tRespuesta respuesta = compararCodigos(secreto, hipotesis);
     tachaIncompatibles(hipotesis, respuesta, posibles);
     cout << "Colocados: " << respuesta.colocados << "; mal colocados: "
             << respuesta.descolocados << endl;
-    if (quedaSoloUnoPosible(posibles))
+    bool ganador = !(respuesta.colocados == TAM_CODIGO);
+    if (quedaSoloUnoPosible(posibles) && ganador)
         cout << "Venga, que ya deberías saberlo" << endl;
-    return !(respuesta.colocados == TAM_CODIGO);
+    return ganador;
 }
 
 int seleccion(int minimo, int maximo) {
@@ -377,7 +378,7 @@ void jugarPartida(bool admiteRepetidos) {
     tCodigo secreto, hipotesis;  // Codigo secreto e hipotesis
     tCodigosPosibles posibles;  // Array a rellenar por la IA
 
-    int intentos = 0;  // Numero de intentos
+    int intentos = 1;  // Numero de intentos
 
     inicializaIA(admiteRepetidos, posibles);  // Inicializamos la IA
     codigoAleatorio(secreto, admiteRepetidos);  // generamos un codigo aleatorio
