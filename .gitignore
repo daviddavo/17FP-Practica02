@@ -31,3 +31,7 @@
 *.out
 *.app
 /Debug/
+*.cproject
+.project
+*.prefs
+.settings/language.settings.xml

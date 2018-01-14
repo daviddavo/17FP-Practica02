@@ -1,35 +1,40 @@
-/* FP 1ºE Práctica 2 Versión 3
- * David Davó & Victor Martínez
+/* FP 1ºE Practica 2 Version 3
+ * David Davo & Victor Martinez
  * Siguiendo la guia de estilo de C++ de Google https://google.github.io/styleguide/cppguide.html
  */
 // Bibliotecas utilizadas
 #include <iostream>
+#include <algorithm> // Para min() (No sabia que esto era necesario para visual)
 #include <cstdlib>  // Para random
 #include <string>  // Para pedir datos al usuario
 #include <cmath>  // Para calcular codigos posibles
+#include <ctime> // Para la semilla (esto tampoco era necesario en g++)
 
 using namespace std;
 
-constexpr unsigned short int TAM_CODIGO = 4;  // Tamaño del codigo
-constexpr unsigned short int MAX_INTENTOS = 15;  // Numero máximo de intentos
+const unsigned int TAM_CODIGO = 4;  // Tamaño del codigo, tras modificarlo es necesario modificar CODIGOS_POSIBLES
+const unsigned int MAX_INTENTOS = 15;  // Numero maximo de intentos
 
 typedef enum {
     ROJO, AZUL, VERDE, AMARILLO, MARRON, BLANCO, INCORRECTO
-} tColor;  // Enumerado de los colores del código
+} tColor;  // Enumerado de los colores del codigo
 typedef tColor tCodigo[TAM_CODIGO];  // Array de tipo color (enum) que contiene los TAM_CODIGO colores del codigo
 
-// Así se puede retornar, y es más sencillo que pasar dos variables (en mi opinión)
+// Asi se puede retornar, y es mas sencillo que pasar dos variables (en mi opinion)
 typedef struct {
     unsigned int colocados = 0;
     unsigned int descolocados = 0;
-} tRespuesta;  // Usado para la función compararCodigo
+} tRespuesta;  // Usado para la funcion compararCodigo
 
 // Version 2
-constexpr unsigned int CODIGOS_POSIBLES = pow(static_cast<unsigned int> (INCORRECTO), TAM_CODIGO);  // Numero de combinaciones de colores posibles (codigos)
+// CODIGOS_POSIBLES = pow(INCORRECTO, TAM_CODIGO)
+// Nota: Como pow no esta definido como constexpr y el compilador de MSVS no le da la gana,
+// no puedo hacer que se calcule esta constante durante la compilacion y sera necesario calcularla 'a mano'
+const unsigned int CODIGOS_POSIBLES = 1296;
 typedef bool tCodigosPosibles[CODIGOS_POSIBLES];  // Siendo el indice el codigo, y su valor asignado la pertenencia al conjunto
 
-// Versión '3'
-struct tScodigo {  // Usado para ordenar los 'mejores' códigos en la función elegirCodigo y ordenarScores
+// Version '3'
+struct tScodigo {  // Usado para ordenar los 'mejores' codigos en la funcion elegirCodigo y ordenarScores
     unsigned int score;
     unsigned int codigo;
 };
@@ -43,17 +48,17 @@ void pedirCodigo(tCodigo);  // Pide el codigo al usuario
 tRespuesta compararCodigos(const tCodigo, const tCodigo);  // Compara 2 codigos cualquiera y retorna la respuesta
 void codigoAleatorio(tCodigo, bool);  // Genera un codigo aleatorio, con o sin colores repetidos
 void inicializaIA(bool, tCodigosPosibles);  // Inicializa la IA en tCodigosPosibles con codigos con o sin colores repetidos
-unsigned int contarIncompatibles(const tCodigo, const tRespuesta, const tCodigosPosibles);  // Es una especie de simulación de tachaIncompatibles
+unsigned int contarIncompatibles(const tCodigo, const tRespuesta, const tCodigosPosibles);  // Es una especie de simulacion de tachaIncompatibles
 void tachaIncompatibles(const tCodigo, const tRespuesta, tCodigosPosibles);  // Tacha los codigos incompatibles con tCodigo dada la respuesta tRespuesta
-bool quedaSoloUnoPosible(const tCodigosPosibles);  // Retorna true si queda un código posible
-bool jugarRonda(tCodigo, tCodigo, tCodigosPosibles);  // El jugador juega una ronda más
-int seleccion(int, int);  // Hace que el usuario seleccione un número entre un intervalo dado
-void jugarPartida(bool);  // El jugador juega una partida intentando adivinar el código
-bool siguienteRespuesta(tRespuesta&);  // Genera la siguiente permutación de tRespuesta
+bool quedaSoloUnoPosible(const tCodigosPosibles);  // Retorna true si queda un codigo posible
+bool jugarRonda(tCodigo, tCodigo, tCodigosPosibles);  // El jugador juega una ronda mas
+int seleccion(int, int);  // Hace que el usuario seleccione un numero entre un intervalo dado
+void jugarPartida(bool);  // El jugador juega una partida intentando adivinar el codigo
+bool siguienteRespuesta(tRespuesta&);  // Genera la siguiente permutacion de tRespuesta
 void ordenarScores(tScodigo[]);  // Ordena el array tScodigo[] en factor de .score
 bool elegirCodigo(tCodigo, const tCodigosPosibles);  // La IA elige el mejor codigo por el que apostar
-void jugarIA(bool);  // Comienza una partida en la que la IA adivina el código
-void mainMenu();  // Menú principal del juego (no me gusta poner casi nada en main())
+void jugarIA(bool);  // Comienza una partida en la que la IA adivina el codigo
+void mainMenu();  // Menu principal del juego (no me gusta poner casi nada en main())
 
 // Vamos a definir el operador == para nuestro struct tRespuesta
 bool operator==(tRespuesta r1, tRespuesta r2) {
@@ -99,7 +104,7 @@ tColor char2color(char c) {
      * Salida: Color asignado al caracter c
      */
     tColor color;  // Color a retornar
-    c = toupper(c);  // Así siempre es mayúsculas
+    c = toupper(c);  // Asi siempre es mayusculas
 
     switch (c) {
     case 'R':
@@ -143,7 +148,7 @@ string code2str(tCodigo codigo) {
 
 void pedirCodigo(tCodigo codigo) {
     /*
-     * Entrada: El código a rellenar por el usuario
+     * Entrada: El codigo a rellenar por el usuario
      * Salida: Nada
      */
     // Primero mostramos la frase
@@ -163,15 +168,15 @@ void pedirCodigo(tCodigo codigo) {
     if (line.length() != TAM_CODIGO || cin.fail()) {  // Si el codigo no es de TAM_CODIGO colores o se introducen numeros o cualquier otro valor
         // cin.sync();
         // cin.clear();
-        cout << "El código debe ser de " << TAM_CODIGO << " letras" << endl;
-        pedirCodigo(codigo);  // En caso de fallo, pedimos el código recursivamente
+        cout << "El codigo debe ser de " << TAM_CODIGO << " letras" << endl;
+        pedirCodigo(codigo);  // En caso de fallo, pedimos el codigo recursivamente
     } else {
         for (unsigned int i = 0; i < line.length(); i++) {  // Comprobamos cada color individualmente
             color = char2color(line[i]);  // Convertimos el caracter a color
             if (color == INCORRECTO) {  // Si el color no existe...
                 cout << "El color " << line[i] << " no existe" << endl;  // Se lo decimos al usuario
                 pedirCodigo(codigo);  // Pedimos el codigo recursivamente
-                break;  // Para que no ejecute el bucle i+1 tras pedir el código
+                break;  // Para que no ejecute el bucle i+1 tras pedir el codigo
             }
             codigo[i] = color;  // Lo copia en el array
         }
@@ -182,8 +187,8 @@ tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis) {
     /* Entrada: 2 arrays tCodigo a comparar
      * Salida: Respuesta en formato tRespuesta (.colocados, .descolocados)
      */
-    // No viene definido en las reglas del juego como se deben contar los colores, así que seguiremos
-    // Usando el método de Dr. Donald Knuth [1]
+    // No viene definido en las reglas del juego como se deben contar los colores, asi que seguiremos
+    // Usando el metodo de Dr. Donald Knuth [1]
     tRespuesta respuesta;
     unsigned int x[INCORRECTO] { 0 };  // Guarda las frecuencias de cada color de CODIGO
     unsigned int y[INCORRECTO] { 0 };  // Guarda las frecuencias de cada color de HIPOTESIS
@@ -195,7 +200,7 @@ tRespuesta compararCodigos(const tCodigo codigo, const tCodigo hipotesis) {
         if (codigo[j] == hipotesis[j])
             respuesta.colocados++;
     }
-    // Hacemos la operación
+    // Hacemos la operacion
     // descolocados + colocados = SUMATORIO desde 0 a N de min(codigo[i], hipotesis[i]), donde N es el numero de colores
     // Por lo tanto descolocados = SUMATORIO - colocados
     int S = 0;
@@ -244,14 +249,14 @@ void codigoAleatorio(tCodigo codigo, bool admiteRepetidos) {
 }
 
 void dec2code(int dec, tCodigo codigo) {
-    /* Entrada: codificicación decimal de un codigo, codigo a rellenar
+    /* Entrada: codificicacion decimal de un codigo, codigo a rellenar
      * Salida: Nada
      */
-    // Lo que hacemos es convertir un numero decimal a código,
+    // Lo que hacemos es convertir un numero decimal a codigo,
     // como un cambio de base, siendo el numero maximo de digitos
     // TAM_CODIGO
-    // Así podemos usar, en un array, el 'código' como índice
-    // Codigos útiles:
+    // Asi podemos usar, en un array, el 'codigo' como indice
+    // Codigos utiles:
     // VVAA = 525, AAVV = 770, BZMR = 1140;
     // Primero, vamos a ponerlo todo a 0 (Ejemplo: RRRR)
     for (unsigned int i = 0; i < TAM_CODIGO; i++) {
@@ -283,18 +288,18 @@ void inicializaIA(bool repetidosPermitidos, tCodigosPosibles posibles) {
             dec2code(i, tmp);  // Convertimos el entero a codigo
 
             for (unsigned int j = 0; j < TAM_CODIGO && posibles[i]; j++) {
-                posibles[i] = ++count[tmp[j]] <= 1;  // false si el color está más de una vez, salimos del bucle y se queda en false
+                posibles[i] = ++count[tmp[j]] <= 1;  // false si el color esta mas de una vez, salimos del bucle y se queda en false
             }
         }
     }
 }
 
-// Usado para calcular cuantos SERÍAN eliminados en una situación dada
+// Usado para calcular cuantos SERiAN eliminados en una situacion dada
 // Es una especie de 'simulacion' de tachaIncompatibles (para elegirCodigo)
 unsigned int contarIncompatibles(const tCodigo codigo,
         const tRespuesta respuesta, const tCodigosPosibles posibles) {
     /* Entrada: codigo y respuesta a comprobar, tCodigosPosibles para 'tachar'
-     * Salida: Numero de codigos que serían tachados
+     * Salida: Numero de codigos que serian tachados
      */
     unsigned int cnt = 0;  // Numero de codigos a tachar
     for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++) {
@@ -316,9 +321,9 @@ void tachaIncompatibles(const tCodigo codigo, const tRespuesta respuesta,
      * Salida: Nada
      */
     for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++) {
-        if (posibles[i]) {  // Si el codigo está en el array
+        if (posibles[i]) {  // Si el codigo esta en el array
             tCodigo tmpCod;
-            dec2code(i, tmpCod);  // Lo convertimos a código
+            dec2code(i, tmpCod);  // Lo convertimos a codigo
             posibles[i] = respuesta == compararCodigos(codigo, tmpCod);  // Comparamos las respuestas y lo eliminamos si es procedente
         }
     }
@@ -348,7 +353,7 @@ bool jugarRonda(tCodigo secreto, tCodigo hipotesis, tCodigosPosibles posibles) {
             << respuesta.descolocados << endl;
     bool ganador = !(respuesta.colocados == TAM_CODIGO);
     if (quedaSoloUnoPosible(posibles) && ganador)
-        cout << "Venga, que ya deberías saberlo" << endl;
+        cout << "Venga, que ya deberias saberlo" << endl;
     return ganador;
 }
 
@@ -356,15 +361,15 @@ int seleccion(int minimo, int maximo) {
     /* Entrada: limites de la seleccion
      * Salida: Entero seleccionado
      */
-    // Usada cada vez que se debe hacer la selección en un menú
+    // Usada cada vez que se debe hacer la seleccion en un menu
     int response;
 
-    cout << "Elige una opción: ";
+    cout << "Elige una opcion: ";
     cin >> response;
     while (cin.fail() || !(minimo <= response && response <= maximo)) {
         cin.clear();
         cin.ignore();  // Limpia el buffer
-        cout << "Opción incorrecta. Prueba otra vez: ";  // Si ha habido error muestra el mensaje
+        cout << "Opcion incorrecta. Prueba otra vez: ";  // Si ha habido error muestra el mensaje
         cin >> response;  // Volvemos a pedir la respuesta
     }
 
@@ -386,14 +391,14 @@ void jugarPartida(bool admiteRepetidos) {
     while (jugarRonda(secreto, hipotesis, posibles) && intentos < MAX_INTENTOS)
         intentos++;
     if (intentos >= MAX_INTENTOS) {  // Si se han usado mas intentos del maximo
-        cout << "Lo siento, no te quedan más intentos" << endl;
+        cout << "Lo siento, no te quedan mas intentos" << endl;
     } else {
         cout << "Enhorabuena! Lo encontraste!" << endl;
         cout << "Te ha costado " << intentos << " intento(s)." << endl;
     }
 }
 
-bool siguienteRespuesta(tRespuesta & anterior) {  // Genera la siguiente respuesta de la permutación de respuestas
+bool siguienteRespuesta(tRespuesta & anterior) {  // Genera la siguiente respuesta de la permutacion de respuestas
     /* Entrada: respuesta por referencia (a modificar)
      * Salida: true si no es la ultima respuesta generable
      */
@@ -433,15 +438,16 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles) {
             nPosibles++;  // Cuenta el numero de posibles
 
     if (nPosibles > 1) {  // Si solo queda uno posible, no hace falta buscarlo pues ya lo buscaremos en jugarIA
-        tScodigo scores[CODIGOS_POSIBLES];  // Almacena el minimax de cada código
+        tScodigo scores[CODIGOS_POSIBLES];  // Almacena el minimax de cada codigo
         // Hacemos que el codigo sea igual a i (Para cuando lo ordenemos luego no perderlo)
         for (unsigned int i = 0; i < CODIGOS_POSIBLES; i++)
             scores[i].codigo = i;
 
+		cout << "Calculando la mejor jugada ";
         for (unsigned int j = 0; j < CODIGOS_POSIBLES; j++) {
             // Calcular las posibilidades para cada codigo de posibles
             // Min eliminados = Numero elementos en posibles - maxhc
-            unsigned int maxhc = 0;  // Maximo de posibilidades que se eliminarían...
+            unsigned int maxhc = 0;  // Maximo de posibilidades que se eliminarian...
             if (posibles[j]) {
                 tCodigo tmpCode;
                 tRespuesta tmpRespuesta;
@@ -455,6 +461,7 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles) {
                 } while (siguienteRespuesta(tmpRespuesta));
             }
             scores[j].score = nPosibles - maxhc;  // Calculamos el score
+			if (!(j % 200)) cout << "."; // Para que el usuario no piense que se ha colgado el proceso
         }
 
         ordenarScores(scores);  // Ordenamos el array
@@ -471,6 +478,8 @@ bool elegirCodigo(tCodigo hipotesis, const tCodigosPosibles posibles) {
 
         if (buscarFuera)
             dec2code(scores[0].codigo, hipotesis);
+
+		cout << endl;
     }
 
     return nPosibles == 0;
@@ -502,14 +511,14 @@ void jugarIA(bool admiteRepetidos) {
             cout << "¡Lo tengo! Es " << code2str(hipotesis) << endl;  // Y lo mostramos al usuario
             fin = true;
         } else {
-            cout << "Apuesto por " << code2str(hipotesis) << endl;  // Hacemos nuestra suposición
-            cout << "¿Cuantos colores están bien colocados? ";
+            cout << "Apuesto por " << code2str(hipotesis) << endl;  // Hacemos nuestra suposicion
+            cout << "¿Cuantos colores estan bien colocados? ";
             cin >> respuesta.colocados;  // Obtenemos parte de la respuesta del usuario
             if (respuesta.colocados == TAM_CODIGO) {  // Si hemos acertado
                 cout << "Vaya, he acertado de casualidad!" << endl;
                 fin = true;
             } else {  // Si no, seguimos preguntando por la respuesta y jugando
-                cout << "¿Cuantos colores están mal colocados? ";
+                cout << "¿Cuantos colores estan mal colocados? ";
                 cin >> respuesta.descolocados;
                 tachaIncompatibles(hipotesis, respuesta, posibles);
             }
@@ -522,14 +531,14 @@ void mainMenu() {
      * Salida: Nada
      */
     bool salir = false, repetidos;
-    cout << "Descubre el código secreto! En cada partida, pensaré un código de" << endl
-            << "colores que tendrás que adivinar. En cada intento que hagas te" << endl
-            << "daré pistas, diciéndote cuantos colores de los que has dicho están" << endl
+    cout << "Descubre el codigo secreto! En cada partida, pensare un codigo de" << endl
+            << "colores que tendras que adivinar. En cada intento que hagas te" << endl
+            << "dare pistas, diciendote cuantos colores de los que has dicho estan" << endl
             << "bien colocados, y cuantos no" << endl;
 
     do {
-        cout << "1. Jugar con un código sin colores repetidos" << endl;
-        cout << "2. Jugar con un código con colores repetidos" << endl;
+        cout << "1. Jugar con un codigo sin colores repetidos" << endl;
+        cout << "2. Jugar con un codigo con colores repetidos" << endl;
         cout << endl << "0. Salir" << endl;
 
         switch (seleccion(0, 2)) {
@@ -544,8 +553,8 @@ void mainMenu() {
             break;
         }
         if (!salir) {
-            cout << "¿Quieres pensar tú el código secreto?" << endl << endl
-                    << "1. Sí" << endl << "2. No" << endl;
+            cout << "¿Quieres pensar tu el codigo secreto?" << endl << endl
+                    << "1. Si" << endl << "2. No" << endl;
             if (static_cast<bool>(seleccion(1, 2) - 1)) {
                 jugarPartida(repetidos);
             } else {
@@ -559,16 +568,15 @@ void mainMenu() {
 
 int main() {
     /* Juego Mastermind
-     * Al principio mostramos una breve explicación del Mastermind
+     * Al principio mostramos una breve explicacion del Mastermind
      * elegimos si queremos jugar con codigos repetidos y si queremos jugar contra la IA
      */
     srand(time(NULL));  // Semilla de rand
-    setlocale(LC_ALL, "spanish");  // Sólo necesario en Windows
 
     mainMenu();
 
     // Testing
-    /*
+    /* // Prueba tachaIncompatibles();
      tRespuesta respuesta;
      respuesta.descolocados = 4;
      tCodigo codigo = {ROJO, ROJO, VERDE, VERDE};
@@ -576,14 +584,14 @@ int main() {
      tachaIncompatibles(codigo, respuesta, posibles);
      */
 
-    /*
+    /* // Muestra todas las permutaciones de tRespuesta
      tRespuesta prueba;
      do{
      cout << "D/C: " << prueba.descolocados << ", " << prueba.colocados << endl;
      }while(siguienteRespuesta(prueba));
      */
 
-    /*
+    /* // Para ver si comparar codigos funciona
      tCodigo c1, c2;
      codigoAleatorio(c1, true);
      codigoAleatorio(c2, true);
