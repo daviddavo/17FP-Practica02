@@ -1,2 +1,3 @@
 language : cpp
 sudo: disabled
+script: g++ Source.src
